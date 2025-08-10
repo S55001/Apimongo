@@ -16,10 +16,12 @@ class User extends Authenticatable
         protected $collection = 'users'; // opcional, por claridad
         protected $primaryKey = '_id';
 
-        protected $fillable = ['name','email','password'];
+        protected $fillable = ['name','email','password','role'];// Nuevo campo requerido para el módulo de ventas
         protected $hidden   = ['password','remember_token'];
 
         // Para que el _id regrese como string (útil en JSON)
-        protected $casts = ['_id' => 'string'];
+        protected $casts = [
+        '_id' => 'string', // Para compatibilidad JSON
+        'email_verified_at' => 'datetime'
+    ];
 }
-    

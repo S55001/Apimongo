@@ -11,47 +11,36 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Conexión directa a MongoDB
-        $client = new Client(
-            'mongodb://'.env('DB_HOST', '127.0.0.1').':'.env('DB_PORT', '27017')
-        );
-        
-        $collection = $client->selectDatabase(env('DB_DATABASE', 'panaderia'))->users;
+        $client = new Client('mongodb://' . env('DB_HOST','127.0.0.1') . ':' . env('DB_PORT','27017'));
+        $dbName = env('DB_DATABASE','panaderia');
+        $collection = $client->selectDatabase($dbName)->users;
 
-        // Limpiar colección
+        $now = new UTCDateTime(now()->getTimestampMs());
+
         $collection->deleteMany([]);
 
-        // Datos de usuarios a insertar
-        $users = [
+        $collection->insertMany([
             [
                 'name' => 'Administrador',
                 'email' => 'admin@panaderia.com',
                 'password' => Hash::make('Admin123'),
                 'role' => 'admin',
-                'created_at' => new UTCDateTime(now()->timestamp * 1000),
-                'updated_at' => new UTCDateTime(now()->timestamp * 1000)
+                'created_at' => $now, 'updated_at' => $now,
             ],
             [
                 'name' => 'Vendedor 1',
                 'email' => 'vendedor1@panaderia.com',
                 'password' => Hash::make('Vendedor1'),
                 'role' => 'vendedor',
-                'created_at' => new UTCDateTime(now()->timestamp * 1000),
-                'updated_at' => new UTCDateTime(now()->timestamp * 1000)
+                'created_at' => $now, 'updated_at' => $now,
             ],
             [
                 'name' => 'Cliente Ejemplo',
                 'email' => 'cliente@panaderia.com',
                 'password' => Hash::make('Cliente123'),
                 'role' => 'cliente',
-                'created_at' => new UTCDateTime(now()->timestamp * 1000),
-                'updated_at' => new UTCDateTime(now()->timestamp * 1000)
-            ]
-        ];
-
-        // Insertar usuarios
-        $collection->insertMany($users);
-
-        $this->command->info('Usuarios insertados correctamente en MongoDB!');
+                'created_at' => $now, 'updated_at' => $now,
+            ],
+        ]);
     }
 }

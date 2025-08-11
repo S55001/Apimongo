@@ -2,26 +2,35 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+// 👇 OJO: usa el Auth User de Mongo, no el de Illuminate
+use MongoDB\Laravel\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
-        use Notifiable;
+    use Notifiable;
 
-        protected $connection = 'mongodb';
-        protected $collection = 'users'; // opcional, por claridad
-        protected $primaryKey = '_id';
+    protected $connection = 'mongodb';
+    protected $collection = 'users';
+    protected $primaryKey = '_id';
 
-        protected $fillable = ['name','email','password','role'];// Nuevo campo requerido para el módulo de ventas
-        protected $hidden   = ['password','remember_token'];
+    protected $fillable = ['name','email','password','role'];
+    protected $hidden   = ['password','remember_token'];
 
-        // Para que el _id regrese como string (útil en JSON)
-        protected $casts = [
-        '_id' => 'string', // Para compatibilidad JSON
-        'email_verified_at' => 'datetime'
+    protected $casts = [
+        '_id'               => 'string',
+        'email_verified_at' => 'datetime',
     ];
+
+    // JWT
+    public function getJWTIdentifier()
+    {
+        return (string) $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return ['role' => $this->role, 'name' => $this->name];
+    }
 }

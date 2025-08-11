@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
+
 
 class SaleController extends Controller
 {
@@ -37,47 +39,46 @@ class SaleController extends Controller
 
     /** POST /api/sales */
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'products' => 'required|array|min:1',
-            'products.*.product_id' => 'required|integer|min:1',
-            'products.*.name' => 'required|string|max:100',
-            'products.*.unit_price' => 'required|numeric|min:0',
-            'products.*.quantity' => 'required|integer|min:1',
-            'payment_method' => 'required|in:efectivo,tarjeta,transferencia',
-            'customer_info' => 'nullable|array',
+{
+    $validated = $request->validate([
+        'user_id' => 'required|string',
+        'products' => 'required|array|min:1',
+        'products.*.product_id' => 'required|integer|min:1',
+        'products.*.name' => 'required|string|max:100',
+        'products.*.unit_price' => 'required|numeric|min:0',
+        'products.*.quantity' => 'required|integer|min:1',
+        'payment_method' => 'required|in:efectivo,tarjeta,transferencia',
+        'customer_info' => 'nullable|array',
+    ]);
+
+    $user = \App\Models\User::find($validated['user_id']);
+    if (!$user || !in_array($user->role, ['vendedor','admin'])) {
+        return response()->json(['message' => 'No autorizado'], 403);
+    }
+
+    $total = collect($validated['products'])
+        ->sum(fn($p) => $p['unit_price'] * $p['quantity']);
+
+    try {
+        $sale = \App\Models\Sale::create([
+            'user_id'        => (string)$user->_id,
+            'products'       => $validated['products'],
+            'total'          => round($total, 2),
+            'payment_method' => $validated['payment_method'],
+            'status'         => 'completed',
+            'customer_info'  => $validated['customer_info'] ?? null,
         ]);
 
-        $user = $request->user();
-        if (!$user || !in_array($user->role, ['vendedor','admin'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
-
-        $total = collect($validated['products'])
-            ->sum(fn($p) => $p['unit_price'] * $p['quantity']);
-
-        DB::connection('mongodb')->beginTransaction();
-        try {
-            $sale = Sale::create([
-                'user_id'        => (string)$user->_id,
-                'products'       => $validated['products'],
-                'total'          => round($total, 2),
-                'payment_method' => $validated['payment_method'],
-                'status'         => 'completed',
-                'customer_info'  => $validated['customer_info'] ?? null,
-            ]);
-
-            DB::connection('mongodb')->commit();
-
-            return response()->json($sale, 201);
-        } catch (\Throwable $e) {
-            DB::connection('mongodb')->rollBack();
-            return response()->json([
-                'message' => 'Error al registrar la venta',
-                'error'   => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json($sale, 201);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'message' => 'Error al registrar la venta',
+            'error'   => config('app.debug') ? $e->getMessage() : null,
+        ], 500);
     }
+}
+
+
 
     /** GET /api/sales/{id} */
     public function show($id)
@@ -90,41 +91,44 @@ class SaleController extends Controller
 
     /** POST /api/sales/{id}/cancel */
     public function cancel($id, Request $request)
-    {
-        $user = $request->user();
-        if (!$user || !in_array($user->role, ['vendedor','admin'])) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
+{
+    $data = $request->validate([
+        'user_id' => 'required|string'
+    ]);
 
-        DB::connection('mongodb')->beginTransaction();
-        try {
-            $sale = Sale::findOrFail($id);
-
-            if ($sale->status === 'cancelled') {
-                return response()->json(['message' => 'La venta ya está cancelada'], 400);
-            }
-
-            if ($user->role === 'vendedor' && (string)$sale->user_id !== (string)$user->_id) {
-                return response()->json(['message' => 'No autorizado a cancelar esta venta'], 403);
-            }
-
-            $sale->update(['status' => 'cancelled']);
-            DB::connection('mongodb')->commit();
-
-            return response()->json([
-                'message'  => 'Venta cancelada correctamente',
-                'products' => collect($sale->products)->map(fn($p) => [
-                    'product_id' => $p['product_id'],
-                    'quantity'   => $p['quantity'],
-                ])->values()
-            ]);
-
-        } catch (\Throwable $e) {
-            DB::connection('mongodb')->rollBack();
-            return response()->json([
-                'message' => 'Error al cancelar la venta',
-                'error'   => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+    $user = \App\Models\User::find($data['user_id']);
+    if (!$user || !in_array($user->role, ['vendedor','admin'])) {
+        return response()->json(['message' => 'No autorizado'], 403);
     }
+
+    try {
+        $sale = \App\Models\Sale::findOrFail($id);
+
+        if ($sale->status === 'cancelled') {
+            return response()->json(['message' => 'La venta ya está cancelada'], 400);
+        }
+
+        if ($user->role === 'vendedor' && (string)$sale->user_id !== (string)$user->_id) {
+            return response()->json(['message' => 'No autorizado a cancelar esta venta'], 403);
+        }
+
+        $sale->update(['status' => 'cancelled']);
+
+        return response()->json([
+            'message'  => 'Venta cancelada correctamente',
+            'products' => collect($sale->products)->map(fn($p) => [
+                'product_id' => $p['product_id'],
+                'quantity'   => $p['quantity'],
+            ])->values()
+        ]);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'message' => 'Error al cancelar la venta',
+            'error'   => config('app.debug') ? $e->getMessage() : null,
+        ], 500);
+    }
+}
+
+
 }

@@ -119,8 +119,9 @@ return [
             'username' => env('DB_USERNAME'),
             'password' => env('DB_PASSWORD'),
             'options' => [
-                'database' => 'admin' // Para autenticación si es necesario
-            ]
+                'appname'      => 'LaravelMongo',
+                'retryWrites'  => false,// Para autenticación si es necesario
+            ],
         ],
 
     ],

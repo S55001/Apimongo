@@ -22,15 +22,4 @@ class User extends Authenticatable implements JWTSubject
         '_id'               => 'string',
         'email_verified_at' => 'datetime',
     ];
-
-    // JWT
-    public function getJWTIdentifier()
-    {
-        return (string) $this->getKey();
-    }
-
-    public function getJWTCustomClaims()
-    {
-        return ['role' => $this->role, 'name' => $this->name];
-    }
 }

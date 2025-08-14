@@ -115,7 +115,7 @@ return [
         'mongodb' => [
             'driver' => 'mongodb',
             'dsn'      => env('MONGODB_DSN'),
-            'database' => env('DB_DATABASE', 'Clusterjatg'),
+            'database' => env('DB_DATABASE', 'panaderia'),
             /*'database' => env('DB_DATABASE','panaderia'),*/
             'username' => env('DB_USERNAME'),
             'password' => env('DB_PASSWORD'),

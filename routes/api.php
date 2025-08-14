@@ -1,10 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\SaleController;
 use App\Http\Controllers\API\ReportController;
+
+
 
 // Ping / Test
 Route::get('/ping', fn() => response()->json(['ok' => true]));
@@ -12,6 +14,8 @@ Route::get('/test', fn() => response()->json(['message' => 'API Usuarios/Ventas 
 
 // LOGIN
 Route::post('/login', [AuthController::class, 'login']);
+// Registrar usuario usando el mismo método store de UserController:
+Route::post('/register', [UserController::class, 'store']);
 
 // USERS CRUD
 Route::apiResource('users', UserController::class);
